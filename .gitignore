@@ -1,0 +1,9 @@
+/.gradle
+/.idea
+/out
+/build
+*.iml
+*.ipr
+*.iws
+/resources
+/src/dev/tigr/ttvattendance/Application.kt
