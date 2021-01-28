@@ -5,11 +5,12 @@ import io.ktor.response.*
 import io.ktor.util.pipeline.*
 import java.io.File
 import java.lang.StringBuilder
+import kotlin.math.min
 
 /**
  * @author Tigermouthbear 1/27/21
  */
-class DataPage(private val ttvAttendance: TtvAttendance) {
+class DataPage(private val ttvAttendance: TtvAttendance, private val minPresent: Int) {
     val file = File(ttvAttendance.output.path.replace(".json", ".html"))
     private val prefix: ByteArray = """
     <!DOCTYPE html>
@@ -85,10 +86,12 @@ class DataPage(private val ttvAttendance: TtvAttendance) {
 
         // add rows
         val size = ttvAttendance.getAttendance().streams.size
+        val min = min(minPresent, size)
         for(key in sorted.keys.reversed()) {
-            val value = sorted[key]
-            value?.forEach { pair ->
+            val value = sorted[key] ?: continue
+            for(pair in value) {
                 val present = pair.second.streams.size
+                if(present < min) break // break if the entry/rank doesnt meet minimum requirements
                 val absent = size - present
                 out.append("<tr>")
                 out.append("<td>${top - key + 1}</td>")

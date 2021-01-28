@@ -20,7 +20,8 @@ import kotlin.collections.HashMap
 /**
  * @author Tigermouthbear 1/26/21
  */
-class TtvAttendance(val streamer: String, private val api: ApiHandler, private val fileName: String, private val delaySeconds: Long): ApplicationFeature<ApplicationCallPipeline, TtvAttendance, TtvAttendance> {
+// minPresent is the minimum streams present to show up on the data page, idk what else to name it
+class TtvAttendance(val streamer: String, private val api: ApiHandler, private val fileName: String, private val delaySeconds: Long, private val minPresent: Int): ApplicationFeature<ApplicationCallPipeline, TtvAttendance, TtvAttendance> {
     private val objectMapper = ObjectMapper().registerModule(KotlinModule())
     private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
     override val key: AttributeKey<TtvAttendance> = AttributeKey("TTVAttendance")
@@ -49,7 +50,7 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, private v
             }
 
             // initialize data table
-            dataPage = DataPage(this)
+            dataPage = DataPage(this, minPresent)
             dataPage.update()
 
             // setup timer to run at delay
