@@ -10,8 +10,8 @@ import kotlin.math.min
 /**
  * @author Tigermouthbear 1/27/21
  */
-class DataPage(private val ttvAttendance: TtvAttendance, private val minPresent: Int) {
-    val file = File(ttvAttendance.output.path.replace(".json", ".html"))
+class DataPage(private val ttvAttendance: TtvAttendance) {
+    internal val file = File("${ttvAttendance.streamer}.html")
     private val prefix: ByteArray = """
     <!DOCTYPE html>
     <html>
@@ -75,31 +75,34 @@ class DataPage(private val ttvAttendance: TtvAttendance, private val minPresent:
         val out = StringBuilder()
 
         // sort by rank
-        val ranked = hashMapOf<Int, ArrayList<Pair<String, AttendanceRecord>>>()
-        ttvAttendance.getAttendance().chart.forEach { entry ->
-            val len = entry.value.streams.size
+        val ranked = hashMapOf<Int, ArrayList<Pair<String, String>>>()
+        ttvAttendance.database.forEachRecord { name, role, streams ->
+            val len = streams.size
             if(!ranked.contains(len)) ranked[len] = arrayListOf()
-            ranked[len]!!.add(Pair(entry.key, entry.value))
+            ranked[len]!!.add(Pair(name, role))
         }
-        val sorted = ranked.toSortedMap()
-        val top = sorted.lastKey()
 
-        // add rows
-        val size = ttvAttendance.getAttendance().streams.size
-        val min = min(minPresent, size)
-        for(key in sorted.keys.reversed()) {
-            val value = sorted[key] ?: continue
-            for(pair in value) {
-                val present = pair.second.streams.size
-                if(present < min) break // break if the entry/rank doesnt meet minimum requirements
-                val absent = size - present
-                out.append("<tr>")
-                out.append("<td>${top - key + 1}</td>")
-                out.append("<td><a href=\"https://www.twitch.tv/${pair.first}\">${pair.first}</td>")
-                out.append("<td>${pair.second.role}</td>")
-                out.append("<td>$present</td>")
-                out.append("<td>$absent</td>")
-                out.append("</tr>")
+        // make sure theres actually stuff there then add rows
+        if(ranked.size > 0) {
+            val sorted = ranked.toSortedMap()
+            val top = sorted.lastKey()
+
+            // add rows
+            val size = ttvAttendance.database.getStreamsLength()
+            val min = min(3, size) // min viewcount of 3 to prevent lag on load
+            for(key in sorted.keys.reversed()) {
+                val value = sorted[key] ?: continue
+                for(pair in value) {
+                    if(key < min) break // break if the entry/rank doesnt meet minimum requirements
+                    val absent = size - key
+                    out.append("<tr>")
+                    out.append("<td>${top - key + 1}</td>")
+                    out.append("<td><a href=\"https://www.twitch.tv/${pair.first}\">${pair.first}</td>")
+                    out.append("<td>${pair.second}</td>")
+                    out.append("<td>$key</td>")
+                    out.append("<td>$absent</td>")
+                    out.append("</tr>")
+                }
             }
         }
 
@@ -113,6 +116,7 @@ class DataPage(private val ttvAttendance: TtvAttendance, private val minPresent:
     }
 }
 
-suspend fun PipelineContext<Unit, ApplicationCall>.respondDataPage(dataPage: DataPage) {
+suspend fun PipelineContext<Unit, ApplicationCall>.respond(dataPage: DataPage) {
     call.respondFile(dataPage.file)
 }
+
