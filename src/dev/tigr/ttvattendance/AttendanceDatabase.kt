@@ -25,27 +25,30 @@ class AttendanceDatabase(private val database: Database) {
         val streamID = getStreamID(date) ?: return
 
         transaction(database) {
-            chatters.forEach { user, role ->
-                // find rows with name
-                val query = chartTable.select{ chartTable.name eq user }
+            // name to stream map
+            val map = hashMapOf<String, ArrayList<Int>>()
+            chartTable.selectAll().forEach {
+                map[it[chartTable.name]] = objectMapper.readValue(it[chartTable.streams])
+            }
 
-                // create row if none exist
-                if(query.empty()) {
+            chatters.forEach { user, role ->
+                // if there is no entry
+                if(!map.containsKey(user)) {
                     chartTable.insert {
                         it[chartTable.name] = user
                         it[chartTable.role] = role
                         it[chartTable.streams] = "[$streamID]" // json list of stream ids
                     }
                 } else {
-                    // get new list
-                    val list: ArrayList<Int> = objectMapper.readValue(query.first()[chartTable.streams])
-                    if(!list.contains(streamID)) list.add(streamID)
+                    // increment list
+                    if(!map[user]!!.contains(streamID)) map[user]!!.add(streamID)
 
                     // update the row (should only be one)
                     chartTable.update({ chartTable.name eq user }) {
-                        it[chartTable.streams] = objectMapper.writeValueAsString(list)
+                        it[chartTable.streams] = objectMapper.writeValueAsString(map[user])
                         it[chartTable.role] = role
                     }
+
                 }
             }
         }
@@ -78,7 +81,7 @@ class AttendanceDatabase(private val database: Database) {
         var id: Int? = null
         transaction(database) {
             // find id
-            streamTable.select{ streamTable.date eq date }.forEach {
+            streamTable.select{ streamTable.date eq date }.forEach { it: ResultRow ->
                 id = it[streamTable.id]
                 return@forEach
             }
@@ -107,7 +110,7 @@ class StreamChartTable: Table() {
 }
 
 class AttendanceChartTable: Table() {
-    val name = varchar("name", 50)
+    val name = varchar("name", 50).uniqueIndex("viewer_name_index")
     val role = varchar("role", 20)
     val streams = varchar("streams", 2000)
 }

@@ -3,7 +3,6 @@ package dev.tigr.ttvattendance
 import io.ktor.application.*
 import io.ktor.routing.*
 import io.ktor.util.*
-import kotlinx.coroutines.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -32,11 +31,7 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, val datab
             // setup thread to run at delay
             Thread {
                 while(!Thread.interrupted()) {
-                    val start = System.currentTimeMillis()
-                    update()
-                    val length = System.currentTimeMillis() - start
-                    val date = getZonedDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                    println("[TTVA] Updated stream $date at $date in ${length/1000} seconds")
+                    val length = update()
                     Thread.sleep(max((delaySeconds * 1000) - length, 0))
                 }
             }.start()
@@ -51,19 +46,32 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, val datab
         }
     }
 
-    private fun update() {
+    private fun update(): Long {
         api.checkAuth()
 
         if(isLive()) {
+            val start = System.currentTimeMillis()
+
             // add stream date if absent, dont change to current date bc the stream could go past midnight
-            if(date == null) date = getZonedDate().format(streamDateFormatter)
+            if(date == null) {
+                date = getZonedDate().format(streamDateFormatter)
+                println("[TTVA] $streamer went online")
+            }
 
             // update database and datapage
             database.update(date!!, api.getChatData(streamer).chatters)
             dataPage.update()
+
+            // calculate time it took and print
+            val length = System.currentTimeMillis() - start
+            val date = getZonedDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            println("[TTVA] Updated stream $date at $date in ${length/1000} seconds")
         } else {
             date = null // used as a way to tell if the stream was offline
+            println("[TTVA] $streamer went offline")
         }
+
+        return 0
     }
 
     private fun isLive(): Boolean {
