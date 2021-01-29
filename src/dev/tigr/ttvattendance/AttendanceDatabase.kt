@@ -37,10 +37,12 @@ class AttendanceDatabase(private val database: Database) {
                         it[chartTable.streams] = "[$streamID]" // json list of stream ids
                     }
                 } else {
+                    // get new list
+                    val list: ArrayList<Int> = objectMapper.readValue(query.first()[chartTable.streams])
+                    if(!list.contains(streamID)) list.add(streamID)
+
                     // update the row (should only be one)
-                    query.forEach {
-                        val list: ArrayList<Int> = objectMapper.readValue(it[chartTable.streams])
-                        if(!list.contains(streamID)) list.add(streamID)
+                    chartTable.update({ chartTable.name eq user }) {
                         it[chartTable.streams] = objectMapper.writeValueAsString(list)
                         it[chartTable.role] = role
                     }

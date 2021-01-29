@@ -3,6 +3,7 @@ package dev.tigr.ttvattendance
 import io.ktor.application.*
 import io.ktor.routing.*
 import io.ktor.util.*
+import kotlinx.coroutines.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatterBuilder
@@ -10,13 +11,13 @@ import java.time.temporal.ChronoField
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 /**
  * @author Tigermouthbear 1/26/21
  */
 class TtvAttendance(val streamer: String, private val api: ApiHandler, val database: AttendanceDatabase, private val delaySeconds: Long): ApplicationFeature<ApplicationCallPipeline, TtvAttendance, TtvAttendance> {
     private val dateTimeFormatter = DateTimeFormatterBuilder().parseCaseInsensitive().appendValue(ChronoField.YEAR, 4).appendValue(ChronoField.MONTH_OF_YEAR, 2).appendValue(ChronoField.DAY_OF_MONTH, 2).toFormatter()
-    private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
     override val key: AttributeKey<TtvAttendance> = AttributeKey("TTVAttendance")
 
     private lateinit var dataPage: DataPage
@@ -28,11 +29,15 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, val datab
             dataPage = DataPage(this)
             dataPage.update()
 
-            // setup timer to run at delay
-            scheduledExecutor.scheduleWithFixedDelay({
-                api.checkAuth()
-                update()
-            }, delaySeconds, delaySeconds, TimeUnit.SECONDS)
+            // setup thread to run at delay
+            Thread {
+                while(!Thread.interrupted()) {
+                    val start = System.currentTimeMillis()
+                    api.checkAuth()
+                    update()
+                    Thread.sleep(max((delaySeconds * 1000) - (System.currentTimeMillis() - start), 0))
+                }
+            }.start()
         }
     }
 
@@ -52,6 +57,7 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, val datab
             // update database and datapage
             database.update(date!!, api.getChatData(streamer).chatters)
             dataPage.update()
+            println("Updated stream $date!")
         } else {
             date = null // used as a way to tell if the stream was offline
         }

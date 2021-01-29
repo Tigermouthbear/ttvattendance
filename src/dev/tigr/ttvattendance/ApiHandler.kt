@@ -87,9 +87,7 @@ data class Chatters(val broadcaster: List<String>, val vips: List<String>, val m
     }
 }
 
-data class StreamerResponse(val data: List<Streamer>, val pagination: JsonNode)
-data class Streamer(val id: String, val user_id: String, val user_name: String, val game_id: String, val game_name: String, val type: String,
-                    val title: String, val viewer_count: Int, val started_at: String, val language: String, val thumbnail_url: String, val tag_ids: List<String>)
+data class StreamerResponse(val data: List<JsonNode>, val pagination: JsonNode)
 
 class HttpApiHandler(clientID: String, clientSecret: String, fileName: String): ApiHandler(clientID, clientSecret, fileName) {
     override fun getStreamData(streamer: String): StreamerResponse {
