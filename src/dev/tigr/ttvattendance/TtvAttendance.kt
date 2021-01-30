@@ -1,8 +1,7 @@
 package dev.tigr.ttvattendance
 
-import io.ktor.application.*
 import io.ktor.routing.*
-import io.ktor.util.*
+import org.jetbrains.exposed.sql.Database
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -15,33 +14,28 @@ import kotlin.math.max
 /**
  * @author Tigermouthbear 1/26/21
  */
-class TtvAttendance(val streamer: String, private val api: ApiHandler, val database: AttendanceDatabase, private val delaySeconds: Long): ApplicationFeature<ApplicationCallPipeline, TtvAttendance, TtvAttendance> {
-    private val streamDateFormatter = DateTimeFormatterBuilder().parseCaseInsensitive().appendValue(ChronoField.YEAR, 4).appendValue(ChronoField.MONTH_OF_YEAR, 2).appendValue(ChronoField.DAY_OF_MONTH, 2).toFormatter()
-    override val key: AttributeKey<TtvAttendance> = AttributeKey("TTVAttendance")
-
-    private lateinit var dataPage: DataPage
+class TtvAttendance(val streamer: String, private val api: ApiHandler, database: Database, delay: Long = 300, min: Int = 3) {
+    private val streamDateFormatter = DateTimeFormatterBuilder().parseCaseInsensitive()
+        .appendValue(ChronoField.YEAR, 4).appendValue(ChronoField.MONTH_OF_YEAR, 2)
+        .appendValue(ChronoField.DAY_OF_MONTH, 2).toFormatter()
+    val attendanceCharts = AttendanceCharts(streamer, database)
+    val attendanceSite = AttendanceSite(this, min).also { it.update() }
     private var date: String? = null
-    
-    override fun install(pipeline: ApplicationCallPipeline, configure: TtvAttendance.() -> Unit): TtvAttendance {
-        return this.also(configure).also {
-            // initialize data table
-            dataPage = DataPage(this)
-            dataPage.update()
 
-            // setup thread to run at delay
-            Thread {
-                while(!Thread.interrupted()) {
-                    val length = update()
-                    Thread.sleep(max((delaySeconds * 1000) - length, 0))
-                }
-            }.start()
-        }
+    init {
+        // setup thread to run at delay
+        Thread {
+            while(!Thread.interrupted()) {
+                val length = update()
+                Thread.sleep(max((delay * 1000) - length, 0))
+            }
+        }.start()
     }
 
-    fun respond(route: Route) {
+    fun respond(route: Route, path: String = "/") {
         with(route) {
-            get("/") {
-                respond(dataPage)
+            get(path) {
+                respond(attendanceSite)
             }
         }
     }
@@ -58,17 +52,17 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, val datab
                 println("[TTVA] $streamer went online")
             }
 
-            // update database and datapage
-            database.update(date!!, api.getChatData(streamer).chatters)
-            dataPage.update()
+            // update database and website
+            attendanceCharts.update(date!!, api.getChatData(streamer).chatters)
+            attendanceSite.update()
 
             // calculate time it took and print
             val length = System.currentTimeMillis() - start
             val date = getZonedDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
             println("[TTVA] Updated stream $date at $date in ${length/1000} seconds")
         } else {
+            if(date != null) println("[TTVA] $streamer went offline")
             date = null // used as a way to tell if the stream was offline
-            println("[TTVA] $streamer went offline")
         }
 
         return 0

@@ -9,10 +9,10 @@ import org.jetbrains.exposed.sql.transactions.transaction
 /**
  * @author Tigermouthbear 1/29/21
  */
-class AttendanceDatabase(private val database: Database) {
+class AttendanceCharts(streamer: String, private val database: Database) {
     private val objectMapper = ObjectMapper().registerModule(KotlinModule())
-    private val streamTable = StreamChartTable()
-    private val chartTable = AttendanceChartTable()
+    private val streamTable = StreamChartTable(streamer)
+    private val chartTable = AttendanceChartTable(streamer)
 
     init {
         // create/read tables
@@ -48,7 +48,6 @@ class AttendanceDatabase(private val database: Database) {
                         it[chartTable.streams] = objectMapper.writeValueAsString(map[user])
                         it[chartTable.role] = role
                     }
-
                 }
             }
         }
@@ -81,7 +80,7 @@ class AttendanceDatabase(private val database: Database) {
         var id: Int? = null
         transaction(database) {
             // find id
-            streamTable.select{ streamTable.date eq date }.forEach { it: ResultRow ->
+            streamTable.select{ streamTable.date eq date }.forEach {
                 id = it[streamTable.id]
                 return@forEach
             }
@@ -93,7 +92,7 @@ class AttendanceDatabase(private val database: Database) {
                     id = 0
                     if(it[streamTable.id] >= id!!) id = it[streamTable.id] + 1
                 }
-
+                id = id ?: 0
                 streamTable.insert {
                     it[streamTable.id] = id!!
                     it[streamTable.date] = date
@@ -104,13 +103,13 @@ class AttendanceDatabase(private val database: Database) {
     }
 }
 
-class StreamChartTable: Table() {
+class StreamChartTable(streamer: String): Table("${streamer}_streams") {
     val id = integer("id")
     val date = varchar("date", 8)
 }
 
-class AttendanceChartTable: Table() {
-    val name = varchar("name", 50).uniqueIndex("viewer_name_index")
+class AttendanceChartTable(streamer: String): Table("${streamer}_attendance") {
+    val name = varchar("name", 50).uniqueIndex()
     val role = varchar("role", 20)
     val streams = varchar("streams", 2000)
 }

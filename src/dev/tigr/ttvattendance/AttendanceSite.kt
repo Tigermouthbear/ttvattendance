@@ -10,13 +10,13 @@ import kotlin.math.min
 /**
  * @author Tigermouthbear 1/27/21
  */
-class DataPage(private val ttvAttendance: TtvAttendance) {
-    internal val file = File("${ttvAttendance.streamer}.html")
+class AttendanceSite(private val ttva: TtvAttendance, private val minPresent: Int) {
+    internal val file = File("${ttva.streamer}.html")
     private val prefix: ByteArray = """
     <!DOCTYPE html>
     <html>
         <head>
-            <title>${ttvAttendance.streamer} - TTVAttendance</title>
+            <title>${ttva.streamer} - TTVAttendance</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
             <style>
                 h1, p {
@@ -37,7 +37,7 @@ class DataPage(private val ttvAttendance: TtvAttendance) {
             <div class="position-absoulte">
                 <div class="position-absolute top-0 start-50 translate-middle-x">
                     <h1 class="display-3"><b>Twitch Attendance Chart</b></h1>
-                    <h1 class="display-4">${ttvAttendance.streamer}</h1>
+                    <h1 class="display-4">${ttva.streamer}</h1>
                     <p>updates every 5 mins</p>
                 </div>
             </div>
@@ -76,7 +76,7 @@ class DataPage(private val ttvAttendance: TtvAttendance) {
 
         // sort by rank
         val ranked = hashMapOf<Int, ArrayList<Pair<String, String>>>()
-        ttvAttendance.database.forEachRecord { name, role, streams ->
+        ttva.attendanceCharts.forEachRecord { name, role, streams ->
             val len = streams.size
             if(!ranked.contains(len)) ranked[len] = arrayListOf()
             ranked[len]!!.add(Pair(name, role))
@@ -88,8 +88,8 @@ class DataPage(private val ttvAttendance: TtvAttendance) {
             val top = sorted.lastKey()
 
             // add rows
-            val size = ttvAttendance.database.getStreamsLength()
-            val min = min(3, size) // min viewcount of 3 to prevent lag on load
+            val size = ttva.attendanceCharts.getStreamsLength()
+            val min = min(minPresent, size) // min viewcount to prevent lag on load
             for(key in sorted.keys.reversed()) {
                 val value = sorted[key] ?: continue
                 for(pair in value) {
@@ -116,7 +116,7 @@ class DataPage(private val ttvAttendance: TtvAttendance) {
     }
 }
 
-suspend fun PipelineContext<Unit, ApplicationCall>.respond(dataPage: DataPage) {
-    call.respondFile(dataPage.file)
+suspend fun PipelineContext<Unit, ApplicationCall>.respond(attendanceSite: AttendanceSite) {
+    call.respondFile(attendanceSite.file)
 }
 
