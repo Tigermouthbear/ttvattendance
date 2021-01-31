@@ -59,7 +59,7 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, database:
             // calculate time it took and print
             val length = System.currentTimeMillis() - start
             val date = getZonedDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            println("[TTVA] Updated stream $date at $date in ${length/1000} seconds")
+            println("[TTVA] Updated stream ${this.date} at $date in ${length/1000} seconds")
         } else {
             if(date != null) println("[TTVA] $streamer went offline")
             date = null // used as a way to tell if the stream was offline
