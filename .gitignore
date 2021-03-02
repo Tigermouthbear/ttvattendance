@@ -7,3 +7,4 @@
 *.iws
 /resources
 /src/dev/tigr/ttvattendance/Application.kt
+/stats/build

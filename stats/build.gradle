@@ -1,0 +1,29 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm"
+    id "com.github.johnrengelman.shadow" version "5.2.0"
+}
+
+group "dev.tigr"
+version "0.1"
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    implementation "org.jetbrains.exposed:exposed-core:0.29.1"
+    implementation "org.jetbrains.exposed:exposed-dao:0.29.1"
+    implementation "org.jetbrains.exposed:exposed-jdbc:0.29.1"
+    implementation "org.postgresql:postgresql:42.2.2"
+    implementation "org.slf4j:slf4j-simple:1.7.30"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "dev.tigr.ttvattendance.stats.MainKt"
+    }
+}
+
+build.dependsOn.add(shadowJar)
