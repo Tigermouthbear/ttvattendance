@@ -14,7 +14,7 @@ import kotlin.math.max
 /**
  * @author Tigermouthbear 1/26/21
  */
-class TtvAttendance(val streamer: String, private val api: ApiHandler, database: Database, delay: Long = 300, min: Int = 3) {
+class TtvAttendance(val streamer: String, private val api: ApiHandler, database: Database, delay: Long = 300, min: Int = 3, val startDate: String? = null) {
     private val streamDateFormatter = DateTimeFormatterBuilder().parseCaseInsensitive()
         .appendValue(ChronoField.YEAR, 4).appendValue(ChronoField.MONTH_OF_YEAR, 2)
         .appendValue(ChronoField.DAY_OF_MONTH, 2).toFormatter()

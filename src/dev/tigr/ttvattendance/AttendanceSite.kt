@@ -38,7 +38,7 @@ class AttendanceSite(private val ttva: TtvAttendance, private val minPresent: In
                 <div class="position-absolute top-0 start-50 translate-middle-x">
                     <h1 class="display-3"><b>Twitch Attendance Chart</b></h1>
                     <h1 class="display-4">${ttva.streamer}</h1>
-                    <p>updates every 5 mins</p>
+                    <p>${if(ttva.startDate != null) "tracking since ${ttva.startDate} | " else ""}updates every 5 mins</p>
                 </div>
             </div>
             
