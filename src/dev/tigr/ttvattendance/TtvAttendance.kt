@@ -26,8 +26,13 @@ class TtvAttendance(val streamer: String, private val api: ApiHandler, database:
         // setup thread to run at delay
         Thread {
             while(!Thread.interrupted()) {
-                val length = update()
-                Thread.sleep(max((delay * 1000) - length, 0))
+                try {
+                    val length = update()
+                    Thread.sleep(max((delay * 1000) - length, 0))
+                } catch(e: Exception) {
+                    e.printStackTrace()
+                    Thread.sleep(60000) // sleep for a minute and try again
+                }
             }
         }.start()
     }
