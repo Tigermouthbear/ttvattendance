@@ -2,7 +2,7 @@ package dev.tigr.ttvattendance
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import java.io.File
 import java.net.URL
@@ -14,7 +14,7 @@ import javax.net.ssl.HttpsURLConnection
  * @author Tigermouthbear 1/27/21
  */
 abstract class ApiHandler(protected val clientID: String, private val clientSecret: String, fileName: String) {
-    protected val objectMapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
+    protected val objectMapper: ObjectMapper = jacksonObjectMapper()
 
     protected var auth: Auth
     private var authFile: File = File(fileName)
@@ -31,6 +31,7 @@ abstract class ApiHandler(protected val clientID: String, private val clientSecr
             try {
                 // read from file
                 auth = objectMapper.readValue(authFile)
+                checkAuth()
             } catch(e: Exception) {
                 auth = genOAuthToken()
                 saveAuth()
@@ -76,18 +77,32 @@ data class AuthResponse(val access_token: String, val expires_in: Int, val token
 data class ChatterResponse(val _links: JsonNode, val chatter_count: Int, val chatters: Chatters)
 data class Chatters(val broadcaster: List<String>, val vips: List<String>, val moderators: List<String>, val staff: List<String>, val admins: List<String>,
                     val global_mods: List<String>, val viewers: List<String>) {
-    fun forEach(loop: (String, String) -> Unit) {
-        broadcaster.forEach { name -> loop(name, "broadcaster") }
-        vips.forEach { name -> loop(name, "vips") }
-        moderators.forEach { name -> loop(name, "moderators") }
-        staff.forEach { name -> loop(name, "staff") }
-        admins.forEach { name -> loop(name, "admins") }
-        global_mods.forEach { name -> loop(name, "global_mods") }
-        viewers.forEach { name -> loop(name, "viewers") }
+    fun forEach(loop: (String, ChatRole) -> Unit) {
+        broadcaster.forEach { name -> loop(name, ChatRole.BROADCASTER) }
+        vips.forEach { name -> loop(name, ChatRole.VIP) }
+        moderators.forEach { name -> loop(name, ChatRole.MODERATOR) }
+        staff.forEach { name -> loop(name, ChatRole.STAFF) }
+        admins.forEach { name -> loop(name, ChatRole.ADMIN) }
+        global_mods.forEach { name -> loop(name, ChatRole.GLOBAL_MODERATOR) }
+        viewers.forEach { name -> loop(name, ChatRole.VIEWER) }
+    }
+
+    fun size(): Int {
+        return broadcaster.size + vips.size + moderators.size + staff.size + admins.size + global_mods.size + viewers.size
     }
 }
 
 data class StreamerResponse(val data: List<JsonNode>, val pagination: JsonNode)
+
+enum class ChatRole(val text: String) {
+    VIEWER("viewer"),
+    GLOBAL_MODERATOR("global_mod"),
+    ADMIN("admin"),
+    STAFF("staff"),
+    MODERATOR("moderator"),
+    VIP("vip"),
+    BROADCASTER("broadcaster")
+}
 
 class HttpApiHandler(clientID: String, clientSecret: String, fileName: String): ApiHandler(clientID, clientSecret, fileName) {
     override fun getStreamData(streamer: String): StreamerResponse {

@@ -1,2 +1,4 @@
 rootProject.name = "ttvattendance"
+
+include "core"
 include "stats"

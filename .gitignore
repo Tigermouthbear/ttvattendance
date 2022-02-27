@@ -6,5 +6,8 @@
 *.ipr
 *.iws
 /resources
-/src/dev/tigr/ttvattendance/Application.kt
+/core/src/main/kotlin/dev/tigr/ttvattendance/Application.kt
+/stats/build
+ttva.secret
+/core/build
 /stats/build
